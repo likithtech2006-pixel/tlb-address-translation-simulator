@@ -13,3 +13,6 @@ __pycache__/
 
 # Node
 node_modules/
+
+# Local environment files
+.env*
