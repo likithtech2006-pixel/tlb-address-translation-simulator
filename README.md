@@ -3,7 +3,7 @@
 **Operating Systems · Module 5 (Memory Management) · Mini Project #45**
 *Simulate virtual-to-physical address translation using a TLB.*
 
-**Live demo:** LIVE_URL
+**Live demo:** <https://tlb-address-translation-simulator.vercel.app>
 
 TLB/Scope is an interactive simulator of a memory-management unit (MMU). Type a virtual address and watch it travel: it is split into a page number and an offset, looked up in the TLB, resolved by a page-table walk on a miss, handled by the OS on a page fault, checked for write permission, and turned into a physical address. The simulator also measures the hit ratio and effective access time and compares TLB replacement policies.
 
