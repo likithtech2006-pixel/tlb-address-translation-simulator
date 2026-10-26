@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Learn · TLB/Scope</title>
+  <meta name="description" content="Field notes, viva questions, applications and real-world mapping for TLB address translation.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/pages.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='5' fill='%2310131c'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2334f5a4' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Theme before first paint (no flash). The report page is always light.
+    try { const t = null || localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body data-page="learn">
+<script src="js/shell.js?v=8"></script>
+<main id="main" class="page page-learn">
+  <header class="page-hero">
+    <p class="kicker"><span class="step-no">07</span>Step 7 of 9 · Learn</p>
+    <h1 class="page-title" tabindex="-1" style="view-transition-name: jt-learn">Understand the mechanism</h1>
+    <p class="page-lede">Concise field notes, a viva drill with model answers, where this knowledge is used, and how each idea maps to real CPUs and operating systems.</p>
+    <div class="page-actions"><a class="btn" href="#notes-top">Field notes</a><a class="btn" href="#viva-top">Viva drill</a><a class="btn" href="#apps">Applications</a><a class="btn primary" href="verify.html">Verify the engine →</a></div>
+  </header>
+  <span id="notes-top"></span>
+      <div class="notes-grid">
+        <article class="note"><span class="note-n">01</span><h3>Splitting the address</h3><p>With page size 2<sup>n</sup>, the low <i>n</i> bits are the offset and the rest form the virtual page number (VPN). No arithmetic is required in hardware, only wiring.</p><code>VPN = ⌊VA / S⌋ · offset = VA mod S</code></article>
+        <article class="note"><span class="note-n">02</span><h3>The TLB is a cache of PTEs</h3><p>A tiny associative memory keyed by (ASID, VPN). On a hit the frame number arrives in about a cycle; the page table is never touched.</p><code>hit → PA = PFN · S + offset</code></article>
+        <article class="note"><span class="note-n">03</span><h3>Set associativity</h3><p>Low VPN bits select a set and the remaining bits are the tag. Direct-mapped TLBs are cheap but suffer conflict misses, which the bit view colours in amber.</p><code>sets = entries ÷ ways · index = log₂ sets</code></article>
+        <article class="note"><span class="note-n">04</span><h3>Walking the table</h3><p>On a miss, a k-level page table costs k memory reads before the data read. This is why huge VA spaces depend so heavily on TLB reach.</p><code>miss = t + k·m + m</code></article>
+        <article class="note"><span class="note-n">05</span><h3>Faults, dirt and shootdowns</h3><p>A non-present PTE traps to the OS. Under demand paging it picks a victim frame, writes it back if dirty, and invalidates the victim's stale TLB entry (a shootdown).</p><code>EAT += p · S</code></article>
+        <article class="note"><span class="note-n">06</span><h3>Context switches</h3><p>Without ASIDs, every switch must flush the TLB. With ASID tags, entries from several processes coexist and survive the switch.</p><code>match = (ASID, VPN)</code></article>
+      </div>
+
+      <span id="viva-top"></span>
+      <section class="card viva" aria-labelledby="vivaTitle">
+        <header class="card-head"><h2 id="vivaTitle"><span class="idx">N</span>Viva drill</h2><span class="hint">click to reveal</span></header>
+        <div id="vivaList"></div>
+      </section>
+      <section id="apps" class="section-head">
+        <p class="kicker">Impact</p>
+        <h2>Where this is useful</h2>
+        <p class="section-lede">Address translation happens billions of times a second inside every CPU, yet it is invisible. TLB/Scope makes it visible, measurable and testable. These are the people it helps, and how.</p>
+      </section>
+
+      <div class="apps-grid">
+        <article class="app-card" style="--ac:var(--hit)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg></div>
+          <h3>Students &amp; exam preparation</h3>
+          <p>Check hand calculations of VPN, offset, physical address and EAT in seconds. Typical university and GATE-style questions are solved step by step in the Calculation player, so you learn the method, not just the answer.</p>
+          <ul><li>Every formula shown with real numbers</li><li>Hit / miss / fault paths side by side</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--ctx)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
+          <h3>Teachers &amp; classroom demos</h3>
+          <p>One-click scenarios (Belady's anomaly, thrashing, context switches, demand paging) project well on a screen. Rewind the timeline and ask “what if the TLB were bigger?”, and the whole run replays live.</p>
+          <ul><li>Ten ready-made lessons</li><li>Shareable links reproduce a demo exactly</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--prot)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></div>
+          <h3>Lab evaluation &amp; viva</h3>
+          <p>The built-in self-test runs 96 automated checks in front of the examiner, including textbook results such as Belady's 9 → 10 misses and EAT = 130 ns. Export the log as CSV/JSON or print a PDF report.</p>
+          <ul><li>Correctness you can demonstrate</li><li>Viva drill with 14 model answers</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--miss)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg></div>
+          <h3>Hardware design trade-offs</h3>
+          <p>CPU architects must choose TLB size, associativity and replacement policy under tight area and power budgets. The Policy lab plots hit ratio against size for six policies on the same trace, which is the kind of curve used to justify those choices.</p>
+          <ul><li>Fully, set-associative and direct-mapped</li><li>OPT shows the best possible result</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--fault)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg></div>
+          <h3>Performance engineering</h3>
+          <p>Shows why programs with poor locality run slowly: each TLB miss costs a k-level page walk. The time ledger and EAT bars make the cost concrete, which is the reasoning behind techniques such as huge pages and cache-friendly data layouts.</p>
+          <ul><li>Measured vs modelled access time</li><li>Locality, loops and strided workloads</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--p1)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+          <h3>Operating systems &amp; security</h3>
+          <p>Explore what kernels actually manage: ASID tags vs flushing on a context switch, TLB shootdowns after a mapping changes, write protection and dirty-page write-back. Flushing on every switch is the same cost trade-off kernels weigh when they isolate address spaces for security.</p>
+          <ul><li>Up to 4 processes with ASIDs</li><li>Demand paging with FIFO / LRU / CLOCK</li></ul>
+        </article>
+      </div>
+
+      <section class="card helps" aria-labelledby="helpsTitle">
+        <header class="card-head"><h2 id="helpsTitle"><span class="idx">✓</span>How it helps</h2><span class="chip">from theory to intuition</span></header>
+        <div class="helps-grid">
+          <div><b>01</b><h3>See the invisible</h3><p>The hardware path (split → TLB → walk → fault → PA) is drawn bit by bit and stage by stage, instead of being memorised as a diagram.</p></div>
+          <div><b>02</b><h3>Learn by experiment</h3><p>Change one parameter and the same timeline replays, so cause and effect is immediate and honest.</p></div>
+          <div><b>03</b><h3>Verify, don't guess</h3><p>Every number is computed by a tested engine, and the Calculation player shows the working behind it.</p></div>
+          <div><b>04</b><h3>Report &amp; share</h3><p>CSV, JSON and print-ready PDF output, plus links that reproduce the exact session for a teacher or teammate.</p></div>
+        </div>
+      </section>
+
+      <section class="card realworld" aria-labelledby="rwTitle">
+        <header class="card-head"><h2 id="rwTitle"><span class="idx">↔</span>Simulator concept ↔ real systems</h2></header>
+        <div class="table-wrap rw-wrap">
+          <table class="log rw">
+            <thead><tr><th>In TLB/Scope</th><th>In real hardware / OS</th><th>Why it matters</th></tr></thead>
+            <tbody>
+              <tr><td>TLB (entries, ways, policy)</td><td>Per-core L1 data/instruction TLBs plus a larger shared L2 TLB in modern x86 and ARM CPUs</td><td>Most translations are served here in about a cycle</td></tr>
+              <tr><td>k-level page table</td><td>x86-64 uses 4 levels (5 with LA57); RISC-V Sv39/Sv48; ARMv8 up to 4</td><td>Every miss costs up to k extra memory reads</td></tr>
+              <tr><td>ASID mode</td><td>x86 PCID, ARM ASID, RISC-V ASID</td><td>Avoids flushing the TLB on every context switch</td></tr>
+              <tr><td>INVLPG / shootdown</td><td>x86 <code>invlpg</code>, ARM <code>TLBI</code>, cross-core shootdown IPIs</td><td>Keeps cached translations coherent after a mapping changes</td></tr>
+              <tr><td>Demand paging + CLOCK</td><td>OS page-fault handler; Linux reclaims pages with LRU-approximating lists</td><td>Lets programs use more memory than is physically free</td></tr>
+              <tr><td>Protection &amp; dirty bits</td><td>PTE R/W, NX, Dirty and Accessed bits</td><td>Enables copy-on-write, read-only code and efficient write-back</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+</main>
+<script src="js/engine.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/fx.js?v=8"></script>
+</body>
+</html>

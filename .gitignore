@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Local tool settings
+.claude/
+
+# Vercel CLI link data
+.vercel/
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/

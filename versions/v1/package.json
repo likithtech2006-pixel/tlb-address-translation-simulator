@@ -1,0 +1,11 @@
+{
+  "name": "tlb-scope",
+  "version": "2.0.0",
+  "description": "TLB/Scope: an interactive MMU workbench simulating virtual-to-physical address translation with a TLB (OS mini project #45).",
+  "private": true,
+  "scripts": {
+    "test": "node tests/run.js --md",
+    "start": "python -m http.server 5173"
+  },
+  "license": "MIT"
+}

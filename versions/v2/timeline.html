@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Timeline · TLB/Scope</title>
+  <meta name="description" content="Run workloads, scrub the access timeline and review the event log.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/pages.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='5' fill='%2310131c'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2334f5a4' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Theme before first paint (no flash). The report page is always light.
+    try { const t = null || localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body data-page="timeline">
+<script src="js/shell.js?v=8"></script>
+<main id="main" class="page page-timeline">
+  <header class="page-hero">
+    <p class="kicker"><span class="step-no">03</span>Step 3 of 9 · Timeline</p>
+    <h1 class="page-title" tabindex="-1" style="view-transition-name: jt-timeline">Run a workload, scrub through time</h1>
+    <p class="page-lede">Run whole traces, play them like a logic analyzer, and click any moment to rewind. A new access after rewinding <b>branches</b> the timeline.</p>
+    <div class="page-actions"><a class="btn" href="translate.html">← Translate</a><a class="btn primary" href="structures.html">Inspect structures →</a></div>
+  </header>
+      <!-- Workload -->
+      <section class="card workload" aria-labelledby="workTitle">
+        <header class="card-head">
+          <h2 id="workTitle"><span class="idx">E</span>Workload</h2>
+          <span class="hint"><code>[P1:]addr[:W]</code> · commas, spaces or new lines · <code>#</code> comments</span>
+        </header>
+        <textarea id="trace" rows="3" spellcheck="false" aria-label="Address trace">300, 301, 1200, 300, 700, 301, 1200</textarea>
+        <div class="work-row">
+          <button type="button" class="btn primary" id="runTrace">Run trace</button>
+          <button type="button" class="btn" id="loadTrace" title="Queue the trace and play it on the timeline">Queue &amp; play</button>
+          <span class="sep" aria-hidden="true"></span>
+          <label class="inline">Generate
+            <select id="genKind"></select>
+          </label>
+          <label class="inline">× <input type="number" id="genCount" value="48" min="1" max="5000" aria-label="Number of accesses"></label>
+          <button type="button" class="btn" id="genBtn">Fill</button>
+          <span class="sep" aria-hidden="true"></span>
+          <label class="btn file-btn">Import .txt<input type="file" id="importFile" accept=".txt,.csv,.trace,.json"></label>
+          <button type="button" class="btn" id="clearRun" title="Clear the timeline and restart the machine">Clear run</button>
+        </div>
+        <p class="addr-error" id="traceError" role="alert" hidden></p>
+      </section>
+      <!-- Logic analyzer -->
+      <section class="card scope-card" aria-labelledby="scopeTitle">
+        <header class="card-head">
+          <h2 id="scopeTitle"><span class="idx">D</span>Access timeline <small>logic-analyzer view · click any column to time-travel</small></h2>
+          <div class="transport">
+            <button type="button" class="mini-btn" id="tFirst" aria-label="Rewind to start" title="Rewind (Home)">⏮</button>
+            <button type="button" class="mini-btn" id="tBack" aria-label="Step back" title="Step back (←)">◀</button>
+            <button type="button" class="mini-btn play" id="tPlay" aria-label="Play" title="Play / pause (Space)">▶</button>
+            <button type="button" class="mini-btn" id="tFwd" aria-label="Step forward" title="Step forward (→)">▶▏</button>
+            <button type="button" class="mini-btn" id="tLast" aria-label="Jump to end" title="End (End)">⏭</button>
+            <select id="speed" aria-label="Playback speed"><option value="900">0.5×</option><option value="450" selected>1×</option><option value="160">3×</option><option value="40">10×</option></select>
+          </div>
+        </header>
+        <div class="scope" id="scope" role="img" aria-label="Timeline of TLB outcomes"></div>
+        <div class="scrub-row">
+          <span class="tcount" id="tCount">t = 0 / 0</span>
+          <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Timeline position">
+          <span class="branch-note" id="branchNote" hidden>Rewound — a new access will branch the timeline</span>
+        </div>
+      </section>
+      <section class="card log-card" aria-labelledby="logTitle">
+        <header class="card-head">
+          <h2 id="logTitle"><span class="idx">L</span>Translations <small id="logCount"></small></h2>
+          <div class="log-ctl">
+            <div class="seg" role="group" aria-label="Filter by outcome" id="logFilter">
+              <button type="button" data-f="ALL" aria-pressed="true">ALL</button><button type="button" data-f="HIT" aria-pressed="false">HIT</button><button type="button" data-f="MISS" aria-pressed="false">MISS</button><button type="button" data-f="FAULT" aria-pressed="false">FAULT</button><button type="button" data-f="PROT" aria-pressed="false">PROT</button>
+            </div>
+            <button type="button" class="link-btn" id="exportCsv2">CSV ↓</button>
+            <button type="button" class="link-btn" id="exportJson">Session JSON ↓</button>
+            <a class="link-btn" href="report.html">Printable report →</a>
+          </div>
+        </header>
+        <div class="table-wrap">
+          <table class="log">
+            <thead><tr><th>t</th><th>P</th><th>R/W</th><th>VA</th><th>VPN</th><th>Offset</th><th>Outcome</th><th>PFN</th><th>PA</th><th>Cost</th><th>Notes</th></tr></thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
+      </section>
+</main>
+<script src="js/engine.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/fx.js?v=8"></script>
+</body>
+</html>

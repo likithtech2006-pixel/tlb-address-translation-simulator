@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Structures · TLB/Scope</title>
+  <meta name="description" content="Live view of TLB sets and ways, the page-table map with PTE inspector, and physical frames.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/pages.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='5' fill='%2310131c'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2334f5a4' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Theme before first paint (no flash). The report page is always light.
+    try { const t = null || localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body data-page="structures">
+<script src="js/shell.js?v=8"></script>
+<main id="main" class="page page-structures">
+  <header class="page-hero">
+    <p class="kicker"><span class="step-no">04</span>Step 4 of 9 · Structures</p>
+    <h1 class="page-title" tabindex="-1" style="view-transition-name: jt-structures">Inside the machine</h1>
+    <p class="page-lede">The TLB, the page table and physical memory at the current moment on your timeline. Click a page to inspect its PTE, write-protect it or invalidate it.</p>
+    <div class="page-actions"><a class="btn" href="timeline.html">← Timeline</a><a class="btn primary" href="analytics.html">Analyse performance →</a></div>
+  </header>
+      <section class="card tlb-card" aria-labelledby="tlbTitle">
+        <header class="card-head">
+          <h2 id="tlbTitle"><span class="idx">F</span>Translation lookaside buffer</h2>
+          <span class="chip" id="tlbChip"></span>
+        </header>
+        <div class="tlb" id="tlbView"></div>
+        <div class="legend">
+          <span><i class="sw hit"></i>Hit</span><span><i class="sw miss"></i>Filled on miss</span><span><i class="sw ghost"></i>Evicted</span><span><i class="sw hand"></i>CLOCK hand</span>
+          <button type="button" class="link-btn" id="flushBtn">Flush TLB</button>
+        </div>
+      </section>
+      <div class="duo">
+        <section class="card pt-card" aria-labelledby="ptTitle">
+          <header class="card-head">
+            <h2 id="ptTitle"><span class="idx">G</span>Page table</h2>
+            <div class="tabs" id="ptTabs" role="tablist" aria-label="Process"></div>
+          </header>
+          <div class="pager" id="ptPager" hidden></div>
+          <div class="cellmap" id="ptMap" role="grid" aria-label="Virtual pages"></div>
+          <div class="legend">
+            <span><i class="sw present"></i>Resident</span><span><i class="sw intlb"></i>In TLB</span><span><i class="sw dirty"></i>Dirty</span><span><i class="sw ro"></i>Read-only</span><span><i class="sw absent"></i>Not present</span>
+          </div>
+          <div class="inspector" id="ptInspector">
+            <p class="muted">Select a page to inspect its page-table entry.</p>
+          </div>
+        </section>
+
+        <section class="card mem-card" aria-labelledby="memTitle">
+          <header class="card-head">
+            <h2 id="memTitle"><span class="idx">H</span>Physical memory</h2>
+            <span class="chip" id="memChip"></span>
+          </header>
+          <div class="pager" id="memPager" hidden></div>
+          <div class="frames" id="memMap"></div>
+          <div class="legend" id="memLegend"></div>
+        </section>
+      </div>
+</main>
+<script src="js/engine.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/fx.js?v=8"></script>
+</body>
+</html>

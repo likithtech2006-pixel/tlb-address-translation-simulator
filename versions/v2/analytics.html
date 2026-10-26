@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Analytics · TLB/Scope</title>
+  <meta name="description" content="Telemetry KPIs, hit-ratio chart and the effective access time calculator.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/pages.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='5' fill='%2310131c'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2334f5a4' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Theme before first paint (no flash). The report page is always light.
+    try { const t = null || localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body data-page="analytics">
+<script src="js/shell.js?v=8"></script>
+<main id="main" class="page page-analytics">
+  <header class="page-hero">
+    <p class="kicker"><span class="step-no">05</span>Step 5 of 9 · Analytics</p>
+    <h1 class="page-title" tabindex="-1" style="view-transition-name: jt-analytics">How fast is it really?</h1>
+    <p class="page-lede">Hit ratio over time, the outcome mix, and effective access time: the textbook model next to what your run actually measured.</p>
+    <div class="page-actions"><button type="button" class="btn" id="exportCsv">Export log CSV ↓</button><a class="btn primary" href="lab.html">Compare policies →</a></div>
+  </header>
+      <div class="kpis" id="kpis"></div>
+
+      <div class="duo">
+        <section class="card" aria-labelledby="chartTitle">
+          <header class="card-head"><h2 id="chartTitle"><span class="idx">I</span>Hit ratio over time</h2><span class="chip">cumulative · rolling 8</span></header>
+          <div class="chart" id="hitChart"></div>
+          <div class="mixbar" id="mixbar" aria-label="Outcome mix"></div>
+        </section>
+
+        <section class="card eat-card" aria-labelledby="eatTitle">
+          <header class="card-head"><h2 id="eatTitle"><span class="idx">J</span>Effective access time</h2>
+            <button type="button" class="link-btn" id="eatUseMeasured">Use measured h, p</button></header>
+          <div class="eat-grid">
+            <label class="field">Hit ratio <i>h</i><input type="number" id="eH" min="0" max="1" step="0.01" value="0.8"></label>
+            <label class="field">TLB <i>t</i> ns<input type="number" id="eT" min="0" step="1" value="10"></label>
+            <label class="field">Memory <i>m</i> ns<input type="number" id="eM" min="0" step="1" value="100"></label>
+            <label class="field">Levels <i>k</i><input type="number" id="eK" min="1" max="4" step="1" value="1"></label>
+            <label class="field">Fault rate <i>p</i><input type="number" id="eP" min="0" max="1" step="0.001" value="0"></label>
+            <label class="field">Fault time <i>S</i> ns<input type="number" id="eS" min="0" step="100" value="8000"></label>
+          </div>
+          <div class="formula">
+            <code>EAT = h(t + m) + (1 − h)(t + (k+1)m) + p·S</code>
+            <code class="sub" id="eatSub"></code>
+          </div>
+          <div class="eat-bars" id="eatBars"></div>
+        </section>
+      </div>
+</main>
+<script src="js/engine.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/fx.js?v=8"></script>
+</body>
+</html>

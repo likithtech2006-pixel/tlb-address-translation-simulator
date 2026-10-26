@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="TLB/Scope — an interactive MMU workbench: TLB hits, misses, page walks, page faults, replacement policies, ASIDs and effective access time, with a time-travel timeline.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <title>TLB/Scope — MMU Workbench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=3">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='3' fill='%2315140f'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2346e09a' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Apply the saved theme before first paint to avoid a flash.
+    try { const t = localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+<a class="skip" href="#bench">Skip to the workbench</a>
+
+<!-- ambient background: aurora blobs + grid + grain -->
+<div class="ambient" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><i class="gridfx"></i><i class="grain"></i></div>
+
+<!-- boot splash (once per session) -->
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="splash-in">
+    <svg viewBox="0 0 40 40" class="splash-chip"><rect x="7" y="7" width="26" height="26" rx="5"/><path d="M11 22h5l2.5-6 3 9 2.5-6h5"/></svg>
+    <div class="splash-word">TLB<i>/</i>Scope</div>
+    <div class="splash-log"><span>POST</span> <b id="splashLine">initialising MMU…</b></div>
+    <div class="splash-bar"><i></i></div>
+  </div>
+</div>
+
+<!-- ============================================================ MASTHEAD -->
+<header class="masthead">
+  <a class="mark" href="#top" aria-label="TLB/Scope home">
+    <svg viewBox="0 0 40 40" aria-hidden="true" class="chip-svg">
+      <g class="pins"><path d="M12 2v5M20 2v5M28 2v5M12 33v5M20 33v5M28 33v5M2 12h5M2 20h5M2 28h5M33 12h5M33 20h5M33 28h5"/></g>
+      <rect x="7" y="7" width="26" height="26" rx="3" class="die"/>
+      <path d="M11 22h5l2.5-6 3 9 2.5-6h5" class="trace"/>
+    </svg>
+    <span class="wordmark">TLB<i>/</i>Scope<small>MMU workbench · rev 2.0</small></span>
+  </a>
+  <nav class="jump" aria-label="Sections">
+    <a href="#bench">Bench</a><a href="#calc">Calculation</a><a href="#structures">Structures</a><a href="#telemetry">Telemetry</a><a href="#lab">Policy lab</a><a href="#log">Log</a><a href="#notes">Field notes</a><a href="#apps">Uses</a>
+  </nav>
+  <div class="mast-actions">
+    <div class="seg" role="group" aria-label="Number format">
+      <button type="button" data-radix="dec" aria-pressed="true">DEC</button><button type="button" data-radix="hex" aria-pressed="false">HEX</button>
+    </div>
+    <button type="button" class="kbar-btn" id="paletteBtn" title="Command palette (Ctrl K)"><span>Search actions</span><kbd>Ctrl K</kbd></button>
+    <button type="button" class="ghost-btn" id="shareBtn" title="Copy a link that reproduces this exact session">Share</button>
+    <button type="button" class="ghost-btn" id="bistJump" title="Run the built-in self-test">Self-test</button>
+    <button type="button" class="icon-btn" id="helpBtn" aria-label="Keyboard shortcuts" title="Shortcuts (?)">?</button>
+    <button type="button" class="icon-btn" id="themeBtn" aria-label="Toggle colour theme" title="Theme (T)"><span class="sun">☼</span><span class="moon">☾</span></button>
+  </div>
+</header>
+
+<!-- datasheet-style readout of the current machine -->
+<div class="spec-strip" id="specStrip" aria-label="Current machine specification"></div>
+
+<main id="top">
+  <div class="print-head" aria-hidden="true"><b>TLB/Scope — simulation report</b><span id="printMeta"></span></div>
+  <!-- ========================================================== INTRO -->
+  <section class="intro">
+    <div class="intro-copy">
+      <p class="kicker"><span class="live-dot"></span>Module 5 · Memory management · Project 45</p>
+      <h1 class="hero-title"><span class="ln"><span>Every address</span></span><span class="ln"><span>takes a <em>route.</em></span></span><span class="ln"><span class="grad">Watch it travel.</span></span></h1>
+      <p class="lede">A memory-management unit you can probe one byte at a time. Split addresses into bits, watch the TLB answer or miss, follow the page walk, catch faults, then <b>rewind time</b> and replay the same run under a different machine.</p>
+      <div class="hero-cta">
+        <a class="btn primary big" href="#bench">Open the workbench <span aria-hidden="true">→</span></a>
+        <button type="button" class="btn big glass" id="heroPalette">Try a scenario <kbd>Ctrl K</kbd></button>
+      </div>
+      <dl class="hero-facts">
+        <div><dt data-count="6">6</dt><dd>replacement policies</dd></div>
+        <div><dt data-count="4">4</dt><dd>page-table levels</dd></div>
+        <div><dt data-count="96">96</dt><dd>automated tests</dd></div>
+        <div><dt data-count="32">32</dt><dd>bit address space</dd></div>
+      </dl>
+    </div>
+    <div class="hero-viz card" aria-label="Live MMU animation">
+      <div class="hv-head"><span class="hv-title"><span class="live-dot"></span>LIVE · mini-MMU running a locality workload</span><span class="hv-ratio"><b id="hvRatio">0%</b> hit ratio</span></div>
+      <svg id="heroSvg" viewBox="0 0 560 360" role="img" aria-label="Packets travelling CPU to TLB to RAM, through the page table on a miss and the disk on a fault"></svg>
+      <div class="hv-foot">
+        <span><i class="sw hit"></i>Hit <b id="hvHit">0</b></span>
+        <span><i class="sw miss"></i>Walk <b id="hvMiss">0</b></span>
+        <span><i class="sw fault"></i>Fault <b id="hvFault">0</b></span>
+        <span class="hv-addr" id="hvAddr">VA —</span>
+      </div>
+    </div>
+    <ol class="route" aria-label="Translation route">
+      <li><b>VA</b><span>CPU issues virtual address</span></li>
+      <li><b>TLB</b><span>Associative tag match</span></li>
+      <li><b>WALK</b><span>k-level page table on miss</span></li>
+      <li><b>OS</b><span>Fault handler, if not present</span></li>
+      <li><b>PA</b><span>frame × size + offset</span></li>
+    </ol>
+  </section>
+
+  <div class="bench" id="bench">
+    <!-- ======================================================== CONTROL DECK -->
+    <aside class="deck" aria-label="Machine configuration">
+      <div class="deck-head">
+        <h2>Control deck</h2>
+        <button type="button" class="link-btn" id="resetCfg">Factory reset</button>
+      </div>
+
+      <fieldset class="block">
+        <legend><span>01</span>Address geometry</legend>
+        <label class="field">Virtual address width
+          <span class="range-row"><input type="range" id="vaBits" min="4" max="32" step="1"><output for="vaBits" id="vaBitsOut"></output></span>
+        </label>
+        <label class="field">Physical address width
+          <span class="range-row"><input type="range" id="paBits" min="4" max="32" step="1"><output for="paBits" id="paBitsOut"></output></span>
+        </label>
+        <div class="field-pair">
+          <label class="field">Page size
+            <select id="pageSize"></select>
+          </label>
+          <label class="field">Page-table levels
+            <select id="ptLevels"><option value="1">1 · flat</option><option value="2">2 · two-level</option><option value="3">3 · three-level</option><option value="4">4 · four-level</option></select>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="block">
+        <legend><span>02</span>TLB</legend>
+        <div class="field-pair">
+          <label class="field">Entries
+            <select id="tlbEntries"><option>1</option><option>2</option><option>3</option><option>4</option><option>8</option><option>16</option><option>32</option><option>64</option></select>
+          </label>
+          <label class="field">Organisation
+            <select id="tlbWays"></select>
+          </label>
+        </div>
+        <label class="field">Replacement policy
+          <select id="tlbPolicy">
+            <option value="LRU">LRU — least recently used</option>
+            <option value="FIFO">FIFO — oldest insertion</option>
+            <option value="LFU">LFU — least frequently used</option>
+            <option value="CLOCK">CLOCK — second chance</option>
+            <option value="RANDOM">RANDOM — seeded</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset class="block">
+        <legend><span>03</span>Paging &amp; faults</legend>
+        <label class="field">Initial page table
+          <select id="mapping"><option value="sequential">Sequential — page n → frame n</option><option value="sparse">Sparse — even pages only</option><option value="random">Random — seeded scatter</option><option value="empty">Empty — nothing resident</option></select>
+        </label>
+        <div class="field-pair">
+          <label class="field">On page fault
+            <select id="faultMode"><option value="report">Report only</option><option value="demand">Demand-page it in</option></select>
+          </label>
+          <label class="field">Frame victim
+            <select id="framePolicy"><option value="FIFO">FIFO</option><option value="LRU">LRU</option><option value="CLOCK">CLOCK</option></select>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="block">
+        <legend><span>04</span>Processes</legend>
+        <div class="field-pair">
+          <label class="field">Address spaces
+            <select id="processes"><option value="1">1 process</option><option value="2">2 processes</option><option value="3">3 processes</option><option value="4">4 processes</option></select>
+          </label>
+          <label class="field">On context switch
+            <select id="contextMode"><option value="asid">Keep — ASID tags</option><option value="flush">Flush the TLB</option></select>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="block">
+        <legend><span>05</span>Timing model</legend>
+        <div class="field-trio">
+          <label class="field">TLB <i>t</i><span class="unit"><input type="number" id="t" min="0" step="1" inputmode="decimal"><em>ns</em></span></label>
+          <label class="field">Memory <i>m</i><span class="unit"><input type="number" id="m" min="0" step="1" inputmode="decimal"><em>ns</em></span></label>
+          <label class="field">Fault <i>S</i><span class="unit"><input type="number" id="faultTime" min="0" step="100" inputmode="decimal"><em>ns</em></span></label>
+        </div>
+      </fieldset>
+
+      <div class="derived" id="derived" aria-live="polite"></div>
+      <p class="cfg-error" id="cfgError" role="alert" hidden></p>
+
+      <div class="block scenarios">
+        <h3><span>06</span>Scenarios</h3>
+        <div class="scenario-grid" id="scenarioGrid"></div>
+      </div>
+    </aside>
+
+    <!-- ======================================================== MAIN COLUMN -->
+    <div class="stage">
+      <!-- Probe -->
+      <section class="card probe" aria-labelledby="probeTitle">
+        <header class="card-head">
+          <h2 id="probeTitle"><span class="idx">A</span>Probe an address</h2>
+          <span class="hint">Decimal, <code>0x</code> hex, <code>0b</code> binary · <kbd>/</kbd> to focus</span>
+        </header>
+        <div class="probe-row">
+          <label class="pid-select" id="pidWrap" hidden>Process
+            <select id="pid"></select>
+          </label>
+          <div class="seg rw" role="group" aria-label="Access type">
+            <button type="button" data-rw="r" aria-pressed="true">READ</button><button type="button" data-rw="w" aria-pressed="false">WRITE</button>
+          </div>
+          <div class="addr-box">
+            <label for="addr" class="sr-only">Virtual address</label>
+            <input id="addr" autocomplete="off" spellcheck="false" value="300" aria-describedby="addrPreview addrError">
+            <span class="addr-range" id="addrRange"></span>
+          </div>
+          <button type="button" class="btn primary" id="translateBtn">Translate <kbd>↵</kbd></button>
+          <button type="button" class="btn" id="explainBtn" title="Translate, then walk through each hardware stage manually">Step through</button>
+        </div>
+        <p class="addr-preview" id="addrPreview" aria-live="polite"></p>
+        <p class="addr-error" id="addrError" role="alert" hidden></p>
+        <div class="result-bar" id="resultBar" hidden>
+          <div class="quick-result" id="quickResult" aria-live="polite"></div>
+          <div class="explain-ctl">
+            <button type="button" class="btn show-how" id="showHow"><span class="sh-ic" aria-hidden="true">▶</span>Show me what's happening</button>
+            <label class="switch" title="Play the step-by-step calculation automatically after every translation"><input type="checkbox" id="alwaysExplain"><span class="sw-track" aria-hidden="true"><i></i></span>Always explain</label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Calculation player -->
+      <section class="card calc-card" id="calc" aria-labelledby="calcTitle" hidden>
+        <header class="card-head">
+          <h2 id="calcTitle"><span class="idx">∑</span>Calculation player <small>every number derived live, step by step</small></h2>
+          <div class="calc-ctl">
+            <button type="button" class="mini-btn" id="cRestart" aria-label="Replay from the start" title="Replay">↺</button>
+            <button type="button" class="mini-btn" id="cPrev" aria-label="Previous step">◀</button>
+            <button type="button" class="mini-btn play" id="cPlay" aria-label="Play or pause">▶</button>
+            <button type="button" class="mini-btn" id="cNext" aria-label="Next step">▶▏</button>
+            <button type="button" class="mini-btn close-x" id="cClose" aria-label="Hide the calculation player" title="Hide">✕</button>
+            <div class="seg" role="group" aria-label="Playback speed" id="cSpeed"><button type="button" data-sp="0.55" aria-pressed="false">0.5×</button><button type="button" data-sp="1" aria-pressed="true">1×</button><button type="button" data-sp="2" aria-pressed="false">2×</button></div>
+          </div>
+        </header>
+        <div class="calc-rail" id="cRail" role="tablist" aria-label="Calculation steps"></div>
+        <div class="calc-body">
+          <div class="calc-graph"><svg id="cGraph" viewBox="0 0 640 290" role="img" aria-label="Computation graph of the translation"></svg></div>
+          <ol class="calc-sheet" id="cSheet" aria-live="polite"></ol>
+        </div>
+        <div class="ledger" id="cLedger"></div>
+      </section>
+
+      <!-- Bit surgery -->
+      <section class="card bits-card" aria-labelledby="bitsTitle">
+        <header class="card-head">
+          <h2 id="bitsTitle"><span class="idx">B</span>Bit surgery</h2>
+          <span class="badge" id="outcomeBadge" data-o="idle">IDLE</span>
+        </header>
+        <div class="bits-scroll"><div class="bits" id="bits"></div></div>
+        <div class="equation" id="equation"></div>
+      </section>
+
+      <!-- Datapath -->
+      <section class="card path-card" aria-labelledby="pathTitle">
+        <header class="card-head">
+          <h2 id="pathTitle"><span class="idx">C</span>MMU datapath</h2>
+          <div class="stepper" id="stepper" hidden>
+            <button type="button" class="mini-btn" id="stagePrev" aria-label="Previous stage">◀</button>
+            <span id="stageCount">0 / 0</span>
+            <button type="button" class="mini-btn" id="stageNext" aria-label="Next stage">▶</button>
+            <button type="button" class="mini-btn" id="stageDone">Done</button>
+          </div>
+        </header>
+        <div class="datapath" id="datapath"></div>
+        <div class="narration" id="narration" aria-live="polite">
+          <p>Translate an address to light up its route. <b>Step through</b> pauses at each hardware stage.</p>
+        </div>
+      </section>
+
+      <!-- Logic analyzer -->
+      <section class="card scope-card" aria-labelledby="scopeTitle">
+        <header class="card-head">
+          <h2 id="scopeTitle"><span class="idx">D</span>Access timeline <small>logic-analyzer view · click any column to time-travel</small></h2>
+          <div class="transport">
+            <button type="button" class="mini-btn" id="tFirst" aria-label="Rewind to start" title="Rewind (Home)">⏮</button>
+            <button type="button" class="mini-btn" id="tBack" aria-label="Step back" title="Step back (←)">◀</button>
+            <button type="button" class="mini-btn play" id="tPlay" aria-label="Play" title="Play / pause (Space)">▶</button>
+            <button type="button" class="mini-btn" id="tFwd" aria-label="Step forward" title="Step forward (→)">▶▏</button>
+            <button type="button" class="mini-btn" id="tLast" aria-label="Jump to end" title="End (End)">⏭</button>
+            <select id="speed" aria-label="Playback speed"><option value="900">0.5×</option><option value="450" selected>1×</option><option value="160">3×</option><option value="40">10×</option></select>
+          </div>
+        </header>
+        <div class="scope" id="scope" role="img" aria-label="Timeline of TLB outcomes"></div>
+        <div class="scrub-row">
+          <span class="tcount" id="tCount">t = 0 / 0</span>
+          <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Timeline position">
+          <span class="branch-note" id="branchNote" hidden>Rewound — a new access will branch the timeline</span>
+        </div>
+      </section>
+
+      <!-- Workload -->
+      <section class="card workload" aria-labelledby="workTitle">
+        <header class="card-head">
+          <h2 id="workTitle"><span class="idx">E</span>Workload</h2>
+          <span class="hint"><code>[P1:]addr[:W]</code> · commas, spaces or new lines · <code>#</code> comments</span>
+        </header>
+        <textarea id="trace" rows="3" spellcheck="false" aria-label="Address trace">300, 301, 1200, 300, 700, 301, 1200</textarea>
+        <div class="work-row">
+          <button type="button" class="btn primary" id="runTrace">Run trace</button>
+          <button type="button" class="btn" id="loadTrace" title="Queue the trace and play it on the timeline">Queue &amp; play</button>
+          <span class="sep" aria-hidden="true"></span>
+          <label class="inline">Generate
+            <select id="genKind"></select>
+          </label>
+          <label class="inline">× <input type="number" id="genCount" value="48" min="1" max="5000" aria-label="Number of accesses"></label>
+          <button type="button" class="btn" id="genBtn">Fill</button>
+          <span class="sep" aria-hidden="true"></span>
+          <label class="btn file-btn">Import .txt<input type="file" id="importFile" accept=".txt,.csv,.trace,.json"></label>
+          <button type="button" class="btn" id="clearRun" title="Clear the timeline and restart the machine">Clear run</button>
+        </div>
+        <p class="addr-error" id="traceError" role="alert" hidden></p>
+      </section>
+
+      <!-- ===================================================== STRUCTURES -->
+      <section id="structures" class="section-head">
+        <p class="kicker">Internal state</p>
+        <h2>The structures, live</h2>
+      </section>
+
+      <section class="card tlb-card" aria-labelledby="tlbTitle">
+        <header class="card-head">
+          <h2 id="tlbTitle"><span class="idx">F</span>Translation lookaside buffer</h2>
+          <span class="chip" id="tlbChip"></span>
+        </header>
+        <div class="tlb" id="tlbView"></div>
+        <div class="legend">
+          <span><i class="sw hit"></i>Hit</span><span><i class="sw miss"></i>Filled on miss</span><span><i class="sw ghost"></i>Evicted</span><span><i class="sw hand"></i>CLOCK hand</span>
+          <button type="button" class="link-btn" id="flushBtn">Flush TLB</button>
+        </div>
+      </section>
+
+      <div class="duo">
+        <section class="card pt-card" aria-labelledby="ptTitle">
+          <header class="card-head">
+            <h2 id="ptTitle"><span class="idx">G</span>Page table</h2>
+            <div class="tabs" id="ptTabs" role="tablist" aria-label="Process"></div>
+          </header>
+          <div class="pager" id="ptPager" hidden></div>
+          <div class="cellmap" id="ptMap" role="grid" aria-label="Virtual pages"></div>
+          <div class="legend">
+            <span><i class="sw present"></i>Resident</span><span><i class="sw intlb"></i>In TLB</span><span><i class="sw dirty"></i>Dirty</span><span><i class="sw ro"></i>Read-only</span><span><i class="sw absent"></i>Not present</span>
+          </div>
+          <div class="inspector" id="ptInspector">
+            <p class="muted">Select a page to inspect its page-table entry.</p>
+          </div>
+        </section>
+
+        <section class="card mem-card" aria-labelledby="memTitle">
+          <header class="card-head">
+            <h2 id="memTitle"><span class="idx">H</span>Physical memory</h2>
+            <span class="chip" id="memChip"></span>
+          </header>
+          <div class="pager" id="memPager" hidden></div>
+          <div class="frames" id="memMap"></div>
+          <div class="legend" id="memLegend"></div>
+        </section>
+      </div>
+
+      <!-- ===================================================== TELEMETRY -->
+      <section id="telemetry" class="section-head">
+        <p class="kicker">Measurement</p>
+        <h2>Telemetry</h2>
+        <button type="button" class="link-btn" id="exportCsv">Export log CSV ↓</button>
+      </section>
+
+      <div class="kpis" id="kpis"></div>
+
+      <div class="duo">
+        <section class="card" aria-labelledby="chartTitle">
+          <header class="card-head"><h2 id="chartTitle"><span class="idx">I</span>Hit ratio over time</h2><span class="chip">cumulative · rolling 8</span></header>
+          <div class="chart" id="hitChart"></div>
+          <div class="mixbar" id="mixbar" aria-label="Outcome mix"></div>
+        </section>
+
+        <section class="card eat-card" aria-labelledby="eatTitle">
+          <header class="card-head"><h2 id="eatTitle"><span class="idx">J</span>Effective access time</h2>
+            <button type="button" class="link-btn" id="eatUseMeasured">Use measured h, p</button></header>
+          <div class="eat-grid">
+            <label class="field">Hit ratio <i>h</i><input type="number" id="eH" min="0" max="1" step="0.01" value="0.8"></label>
+            <label class="field">TLB <i>t</i> ns<input type="number" id="eT" min="0" step="1" value="10"></label>
+            <label class="field">Memory <i>m</i> ns<input type="number" id="eM" min="0" step="1" value="100"></label>
+            <label class="field">Levels <i>k</i><input type="number" id="eK" min="1" max="4" step="1" value="1"></label>
+            <label class="field">Fault rate <i>p</i><input type="number" id="eP" min="0" max="1" step="0.001" value="0"></label>
+            <label class="field">Fault time <i>S</i> ns<input type="number" id="eS" min="0" step="100" value="8000"></label>
+          </div>
+          <div class="formula">
+            <code>EAT = h(t + m) + (1 − h)(t + (k+1)m) + p·S</code>
+            <code class="sub" id="eatSub"></code>
+          </div>
+          <div class="eat-bars" id="eatBars"></div>
+        </section>
+      </div>
+
+      <!-- ===================================================== POLICY LAB -->
+      <section id="lab" class="section-head">
+        <p class="kicker">Experiment</p>
+        <h2>Policy lab</h2>
+      </section>
+      <section class="card lab-card" aria-labelledby="labTitle">
+        <header class="card-head">
+          <h2 id="labTitle"><span class="idx">K</span>Same trace, every policy, every size</h2>
+          <div class="lab-ctl">
+            <label class="inline">Trace
+              <select id="labSource"><option value="current">Current timeline</option><option value="textarea">Workload box</option><option value="belady">Belady's string</option><option value="locality">Working set ×400</option><option value="loop">Cyclic loop ×200</option></select>
+            </label>
+            <button type="button" class="btn primary" id="labRun">Run experiment</button>
+          </div>
+        </header>
+        <p class="muted small">Fully associative TLB at 1–32 entries. OPT (Belady's optimal) sees the future and is the lower bound on misses. A rising line for FIFO with more entries is <b>Belady's anomaly</b>.</p>
+        <div class="lab-out" id="labOut"><p class="muted">Run the experiment to plot hit ratio against TLB size.</p></div>
+      </section>
+
+      <!-- ===================================================== LOG -->
+      <section id="log" class="section-head">
+        <p class="kicker">Record</p>
+        <h2>Event log</h2>
+      </section>
+      <section class="card log-card" aria-labelledby="logTitle">
+        <header class="card-head">
+          <h2 id="logTitle"><span class="idx">L</span>Translations <small id="logCount"></small></h2>
+          <div class="log-ctl">
+            <div class="seg" role="group" aria-label="Filter by outcome" id="logFilter">
+              <button type="button" data-f="ALL" aria-pressed="true">ALL</button><button type="button" data-f="HIT" aria-pressed="false">HIT</button><button type="button" data-f="MISS" aria-pressed="false">MISS</button><button type="button" data-f="FAULT" aria-pressed="false">FAULT</button><button type="button" data-f="PROT" aria-pressed="false">PROT</button>
+            </div>
+            <button type="button" class="link-btn" id="exportCsv2">CSV ↓</button>
+            <button type="button" class="link-btn" id="exportJson">Session JSON ↓</button>
+            <button type="button" class="link-btn" id="printBtn">Print report</button>
+          </div>
+        </header>
+        <div class="table-wrap">
+          <table class="log">
+            <thead><tr><th>t</th><th>P</th><th>R/W</th><th>VA</th><th>VPN</th><th>Offset</th><th>Outcome</th><th>PFN</th><th>PA</th><th>Cost</th><th>Notes</th></tr></thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================================================== BIST -->
+      <section class="card bist-card" id="bist" aria-labelledby="bistTitle">
+        <header class="card-head">
+          <h2 id="bistTitle"><span class="idx">M</span>Built-in self-test</h2>
+          <button type="button" class="btn primary" id="bistRun">Run all tests</button>
+        </header>
+        <p class="muted small">The same automated suite that runs under Node (<code>npm test</code>) executes here against the live engine: functional cases, textbook results (Belady, CLOCK, EAT) and edge cases.</p>
+        <div id="bistOut"></div>
+      </section>
+
+      <!-- ===================================================== NOTES -->
+      <section id="notes" class="section-head">
+        <p class="kicker">Field notes</p>
+        <h2>How the machine thinks</h2>
+      </section>
+      <div class="notes-grid">
+        <article class="note"><span class="note-n">01</span><h3>Splitting the address</h3><p>With page size 2<sup>n</sup>, the low <i>n</i> bits are the offset and the rest form the virtual page number (VPN). No arithmetic is required in hardware, only wiring.</p><code>VPN = ⌊VA / S⌋ · offset = VA mod S</code></article>
+        <article class="note"><span class="note-n">02</span><h3>The TLB is a cache of PTEs</h3><p>A tiny associative memory keyed by (ASID, VPN). On a hit the frame number arrives in about a cycle; the page table is never touched.</p><code>hit → PA = PFN · S + offset</code></article>
+        <article class="note"><span class="note-n">03</span><h3>Set associativity</h3><p>Low VPN bits select a set and the remaining bits are the tag. Direct-mapped TLBs are cheap but suffer conflict misses, which the bit view colours in amber.</p><code>sets = entries ÷ ways · index = log₂ sets</code></article>
+        <article class="note"><span class="note-n">04</span><h3>Walking the table</h3><p>On a miss, a k-level page table costs k memory reads before the data read. This is why huge VA spaces depend so heavily on TLB reach.</p><code>miss = t + k·m + m</code></article>
+        <article class="note"><span class="note-n">05</span><h3>Faults, dirt and shootdowns</h3><p>A non-present PTE traps to the OS. Under demand paging it picks a victim frame, writes it back if dirty, and invalidates the victim's stale TLB entry (a shootdown).</p><code>EAT += p · S</code></article>
+        <article class="note"><span class="note-n">06</span><h3>Context switches</h3><p>Without ASIDs, every switch must flush the TLB. With ASID tags, entries from several processes coexist and survive the switch.</p><code>match = (ASID, VPN)</code></article>
+      </div>
+
+      <section class="card viva" aria-labelledby="vivaTitle">
+        <header class="card-head"><h2 id="vivaTitle"><span class="idx">N</span>Viva drill</h2><span class="hint">click to reveal</span></header>
+        <div id="vivaList"></div>
+      </section>
+
+      <!-- ===================================================== APPLICATIONS -->
+      <section id="apps" class="section-head">
+        <p class="kicker">Impact</p>
+        <h2>Where this is useful</h2>
+        <p class="section-lede">Address translation happens billions of times a second inside every CPU, yet it is invisible. TLB/Scope makes it visible, measurable and testable. These are the people it helps, and how.</p>
+      </section>
+
+      <div class="apps-grid">
+        <article class="app-card" style="--ac:var(--hit)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg></div>
+          <h3>Students &amp; exam preparation</h3>
+          <p>Check hand calculations of VPN, offset, physical address and EAT in seconds. Typical university and GATE-style questions are solved step by step in the Calculation player, so you learn the method, not just the answer.</p>
+          <ul><li>Every formula shown with real numbers</li><li>Hit / miss / fault paths side by side</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--ctx)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
+          <h3>Teachers &amp; classroom demos</h3>
+          <p>One-click scenarios (Belady's anomaly, thrashing, context switches, demand paging) project well on a screen. Rewind the timeline and ask “what if the TLB were bigger?”, and the whole run replays live.</p>
+          <ul><li>Ten ready-made lessons</li><li>Shareable links reproduce a demo exactly</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--prot)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></div>
+          <h3>Lab evaluation &amp; viva</h3>
+          <p>The built-in self-test runs 96 automated checks in front of the examiner, including textbook results such as Belady's 9 → 10 misses and EAT = 130 ns. Export the log as CSV/JSON or print a PDF report.</p>
+          <ul><li>Correctness you can demonstrate</li><li>Viva drill with 14 model answers</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--miss)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg></div>
+          <h3>Hardware design trade-offs</h3>
+          <p>CPU architects must choose TLB size, associativity and replacement policy under tight area and power budgets. The Policy lab plots hit ratio against size for six policies on the same trace, which is the kind of curve used to justify those choices.</p>
+          <ul><li>Fully, set-associative and direct-mapped</li><li>OPT shows the best possible result</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--fault)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg></div>
+          <h3>Performance engineering</h3>
+          <p>Shows why programs with poor locality run slowly: each TLB miss costs a k-level page walk. The time ledger and EAT bars make the cost concrete, which is the reasoning behind techniques such as huge pages and cache-friendly data layouts.</p>
+          <ul><li>Measured vs modelled access time</li><li>Locality, loops and strided workloads</li></ul>
+        </article>
+        <article class="app-card" style="--ac:var(--p1)">
+          <div class="app-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+          <h3>Operating systems &amp; security</h3>
+          <p>Explore what kernels actually manage: ASID tags vs flushing on a context switch, TLB shootdowns after a mapping changes, write protection and dirty-page write-back. Flushing on every switch is the same cost trade-off kernels weigh when they isolate address spaces for security.</p>
+          <ul><li>Up to 4 processes with ASIDs</li><li>Demand paging with FIFO / LRU / CLOCK</li></ul>
+        </article>
+      </div>
+
+      <section class="card helps" aria-labelledby="helpsTitle">
+        <header class="card-head"><h2 id="helpsTitle"><span class="idx">✓</span>How it helps</h2><span class="chip">from theory to intuition</span></header>
+        <div class="helps-grid">
+          <div><b>01</b><h3>See the invisible</h3><p>The hardware path (split → TLB → walk → fault → PA) is drawn bit by bit and stage by stage, instead of being memorised as a diagram.</p></div>
+          <div><b>02</b><h3>Learn by experiment</h3><p>Change one parameter and the same timeline replays, so cause and effect is immediate and honest.</p></div>
+          <div><b>03</b><h3>Verify, don't guess</h3><p>Every number is computed by a tested engine, and the Calculation player shows the working behind it.</p></div>
+          <div><b>04</b><h3>Report &amp; share</h3><p>CSV, JSON and print-ready PDF output, plus links that reproduce the exact session for a teacher or teammate.</p></div>
+        </div>
+      </section>
+
+      <section class="card realworld" aria-labelledby="rwTitle">
+        <header class="card-head"><h2 id="rwTitle"><span class="idx">↔</span>Simulator concept ↔ real systems</h2></header>
+        <div class="table-wrap rw-wrap">
+          <table class="log rw">
+            <thead><tr><th>In TLB/Scope</th><th>In real hardware / OS</th><th>Why it matters</th></tr></thead>
+            <tbody>
+              <tr><td>TLB (entries, ways, policy)</td><td>Per-core L1 data/instruction TLBs plus a larger shared L2 TLB in modern x86 and ARM CPUs</td><td>Most translations are served here in about a cycle</td></tr>
+              <tr><td>k-level page table</td><td>x86-64 uses 4 levels (5 with LA57); RISC-V Sv39/Sv48; ARMv8 up to 4</td><td>Every miss costs up to k extra memory reads</td></tr>
+              <tr><td>ASID mode</td><td>x86 PCID, ARM ASID, RISC-V ASID</td><td>Avoids flushing the TLB on every context switch</td></tr>
+              <tr><td>INVLPG / shootdown</td><td>x86 <code>invlpg</code>, ARM <code>TLBI</code>, cross-core shootdown IPIs</td><td>Keeps cached translations coherent after a mapping changes</td></tr>
+              <tr><td>Demand paging + CLOCK</td><td>OS page-fault handler; Linux reclaims pages with LRU-approximating lists</td><td>Lets programs use more memory than is physically free</td></tr>
+              <tr><td>Protection &amp; dirty bits</td><td>PTE R/W, NX, Dirty and Accessed bits</td><td>Enables copy-on-write, read-only code and efficient write-back</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <span>TLB/Scope · OS mini project #45 — TLB address translation simulator</span>
+        <span>Runs entirely in your browser · no data leaves this page</span>
+      </footer>
+    </div>
+  </div>
+</main>
+
+<dialog id="helpDialog" class="dialog" aria-labelledby="helpTitle">
+  <h2 id="helpTitle">Keyboard</h2>
+  <dl class="keys">
+    <dt><kbd>Ctrl K</kbd></dt><dd>Command palette: scenarios, actions, translate</dd>
+    <dt><kbd>/</kbd></dt><dd>Focus the address probe</dd>
+    <dt><kbd>Enter</kbd></dt><dd>Translate the probed address</dd>
+    <dt><kbd>W</kbd> / <kbd>R</kbd></dt><dd>Switch access to write / read</dd>
+    <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Step the timeline back / forward</dd>
+    <dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>Jump to start / end of timeline</dd>
+    <dt><kbd>Space</kbd></dt><dd>Play / pause timeline</dd>
+    <dt><kbd>X</kbd></dt><dd>Toggle DEC / HEX</dd>
+    <dt><kbd>T</kbd></dt><dd>Toggle theme</dd>
+    <dt><kbd>?</kbd></dt><dd>This panel</dd>
+  </dl>
+  <form method="dialog"><button class="btn primary">Close</button></form>
+</dialog>
+
+<dialog id="palette" class="palette" aria-label="Command palette">
+  <div class="pal-search"><span aria-hidden="true">⌕</span><input id="palInput" placeholder="Type a command, scenario or an address like 0x12C…" autocomplete="off" spellcheck="false" aria-controls="palList"><kbd>Esc</kbd></div>
+  <ul id="palList" class="pal-list" role="listbox"></ul>
+  <div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>Enter</kbd> run</span><span>Tip: type a number to translate it</span></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/engine.js?v=3"></script>
+<script src="tests/suite.js?v=3"></script>
+<script src="js/app.js?v=3"></script>
+<script src="js/fx.js?v=3"></script>
+<script src="js/calc.js?v=3"></script>
+</body>
+</html>

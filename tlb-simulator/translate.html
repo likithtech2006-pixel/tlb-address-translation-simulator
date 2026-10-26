@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Translate · TLB/Scope</title>
+  <meta name="description" content="Translate a virtual address to a physical address, with an optional animated step-by-step calculation.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/pages.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='5' fill='%2310131c'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2334f5a4' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Theme before first paint (no flash). The report page is always light.
+    try { const t = null || localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body data-page="translate">
+<script src="js/shell.js?v=8"></script>
+<main id="main" class="page page-translate">
+  <header class="page-hero">
+    <p class="kicker"><span class="step-no">02</span>Step 2 of 9 · Translate</p>
+    <h1 class="page-title" tabindex="-1" style="view-transition-name: jt-translate">Translate an address</h1>
+    <p class="page-lede">Type any virtual address and get its physical address immediately. Press <b>Show me what’s happening</b> to watch every calculation play out.</p>
+    <div class="page-actions"><a class="btn" href="machine.html">← Machine</a><a class="btn primary" href="timeline.html">Run a workload →</a></div>
+  </header>
+      <!-- Probe -->
+      <section class="card probe" aria-labelledby="probeTitle">
+        <header class="card-head">
+          <h2 id="probeTitle"><span class="idx">A</span>Probe an address</h2>
+          <span class="hint">Decimal, <code>0x</code> hex, <code>0b</code> binary · <kbd>/</kbd> to focus</span>
+        </header>
+        <div class="probe-row">
+          <label class="pid-select" id="pidWrap" hidden>Process
+            <select id="pid"></select>
+          </label>
+          <div class="seg rw" role="group" aria-label="Access type">
+            <button type="button" data-rw="r" aria-pressed="true">READ</button><button type="button" data-rw="w" aria-pressed="false">WRITE</button>
+          </div>
+          <div class="addr-box">
+            <label for="addr" class="sr-only">Virtual address</label>
+            <input id="addr" autocomplete="off" spellcheck="false" value="300" aria-describedby="addrPreview addrError">
+            <span class="addr-range" id="addrRange"></span>
+          </div>
+          <button type="button" class="btn primary" id="translateBtn">Translate <kbd>↵</kbd></button>
+          <button type="button" class="btn" id="explainBtn" title="Translate, then walk through each hardware stage manually">Step through</button>
+        </div>
+        <p class="addr-preview" id="addrPreview" aria-live="polite"></p>
+        <p class="addr-error" id="addrError" role="alert" hidden></p>
+        <div class="result-bar" id="resultBar" hidden>
+          <div class="quick-result" id="quickResult" aria-live="polite"></div>
+          <div class="explain-ctl">
+            <button type="button" class="btn show-how" id="showHow"><span class="sh-ic" aria-hidden="true">▶</span>Show me what's happening</button>
+            <label class="switch" title="Play the step-by-step calculation automatically after every translation"><input type="checkbox" id="alwaysExplain"><span class="sw-track" aria-hidden="true"><i></i></span>Always explain</label>
+          </div>
+        </div>
+      </section>
+      <!-- Calculation player -->
+      <section class="card calc-card" id="calc" aria-labelledby="calcTitle" hidden>
+        <header class="card-head">
+          <h2 id="calcTitle"><span class="idx">∑</span>Calculation player <small>every number derived live, step by step</small></h2>
+          <div class="calc-ctl">
+            <button type="button" class="mini-btn" id="cRestart" aria-label="Replay from the start" title="Replay">↺</button>
+            <button type="button" class="mini-btn" id="cPrev" aria-label="Previous step">◀</button>
+            <button type="button" class="mini-btn play" id="cPlay" aria-label="Play or pause">▶</button>
+            <button type="button" class="mini-btn" id="cNext" aria-label="Next step">▶▏</button>
+            <button type="button" class="mini-btn close-x" id="cClose" aria-label="Hide the calculation player" title="Hide">✕</button>
+            <div class="seg" role="group" aria-label="Playback speed" id="cSpeed"><button type="button" data-sp="0.55" aria-pressed="false">0.5×</button><button type="button" data-sp="1" aria-pressed="true">1×</button><button type="button" data-sp="2" aria-pressed="false">2×</button></div>
+          </div>
+        </header>
+        <div class="calc-rail" id="cRail" role="tablist" aria-label="Calculation steps"></div>
+        <div class="calc-body">
+          <div class="calc-graph"><svg id="cGraph" viewBox="0 0 640 290" role="img" aria-label="Computation graph of the translation"></svg></div>
+          <ol class="calc-sheet" id="cSheet" aria-live="polite"></ol>
+        </div>
+        <div class="ledger" id="cLedger"></div>
+      </section>
+      <!-- Bit surgery -->
+      <section class="card bits-card" aria-labelledby="bitsTitle">
+        <header class="card-head">
+          <h2 id="bitsTitle"><span class="idx">B</span>Bit surgery</h2>
+          <span class="badge" id="outcomeBadge" data-o="idle">IDLE</span>
+        </header>
+        <div class="bits-scroll"><div class="bits" id="bits"></div></div>
+        <div class="equation" id="equation"></div>
+      </section>
+      <!-- Datapath -->
+      <section class="card path-card" aria-labelledby="pathTitle">
+        <header class="card-head">
+          <h2 id="pathTitle"><span class="idx">C</span>MMU datapath</h2>
+          <div class="stepper" id="stepper" hidden>
+            <button type="button" class="mini-btn" id="stagePrev" aria-label="Previous stage">◀</button>
+            <span id="stageCount">0 / 0</span>
+            <button type="button" class="mini-btn" id="stageNext" aria-label="Next stage">▶</button>
+            <button type="button" class="mini-btn" id="stageDone">Done</button>
+          </div>
+        </header>
+        <div class="datapath" id="datapath"></div>
+        <div class="narration" id="narration" aria-live="polite">
+          <p>Translate an address to light up its route. <b>Step through</b> pauses at each hardware stage.</p>
+        </div>
+      </section>
+</main>
+<script src="js/engine.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/fx.js?v=8"></script>
+<script src="js/calc.js?v=8"></script>
+</body>
+</html>

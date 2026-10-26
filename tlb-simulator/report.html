@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Report · TLB/Scope</title>
+  <meta name="description" content="Print-ready report of the current TLB/Scope session.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/pages.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='5' fill='%2310131c'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2334f5a4' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Theme before first paint (no flash). The report page is always light.
+    try { const t = 'light' || localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body data-page="report">
+<script src="js/shell.js?v=8"></script>
+<main id="main" class="page page-report">
+  <header class="page-hero">
+    <p class="kicker"><span class="step-no">09</span>Step 9 of 9 · Report</p>
+    <h1 class="page-title" tabindex="-1" style="view-transition-name: jt-report">Simulation report</h1>
+    <p class="page-lede">Generated from your current session: configuration, results with working, structures, performance and verification.</p>
+    
+  </header>
+  <div class="report-toolbar" aria-label="Report actions">
+    <a class="btn" href="analytics.html">← Back to the app</a>
+    <span class="rt-note">This page is your session as a print-ready A4 document.</span>
+    <button type="button" class="btn primary" id="printNow">Save as PDF / Print</button>
+  </div>
+  <article class="report" id="report" aria-live="polite"></article>
+</main>
+<script src="js/engine.js?v=8"></script>
+<script src="tests/suite.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/fx.js?v=8"></script>
+<script src="js/report.js?v=8"></script>
+</body>
+</html>

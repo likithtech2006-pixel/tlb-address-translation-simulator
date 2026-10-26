@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MMU workbench · TLB/Scope</title>
+  <meta name="description" content="TLB/Scope: an interactive TLB address-translation simulator. Nine connected pages: configure, translate, run workloads, inspect, analyse, compare policies, learn, verify and report.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/pages.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='5' fill='%2310131c'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2334f5a4' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Theme before first paint (no flash). The report page is always light.
+    try { const t = null || localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body data-page="home">
+<script src="js/shell.js?v=8"></script>
+<main id="main" class="page page-home">
+<!-- boot splash (once per session) -->
+<div class="splash" id="splash" aria-hidden="true">
+  <div class="splash-in">
+    <svg viewBox="0 0 40 40" class="splash-chip"><rect x="7" y="7" width="26" height="26" rx="5"/><path d="M11 22h5l2.5-6 3 9 2.5-6h5"/></svg>
+    <div class="splash-word">TLB<i>/</i>Scope</div>
+    <div class="splash-log"><span>POST</span> <b id="splashLine">initialising MMU…</b></div>
+    <div class="splash-bar"><i></i></div>
+  </div>
+</div>
+  <section class="intro">
+    <div class="intro-copy">
+      <p class="kicker"><span class="live-dot"></span>Module 5 · Memory management · Project 45</p>
+      <h1 class="hero-title"><span class="ln"><span>Every address</span></span><span class="ln"><span>takes a <em>route.</em></span></span><span class="ln"><span class="grad">Watch it travel.</span></span></h1>
+      <p class="lede">A memory-management unit you can probe one byte at a time. Split addresses into bits, watch the TLB answer or miss, follow the page walk, catch faults, then <b>rewind time</b> and replay the same run under a different machine.</p>
+      <div class="hero-cta">
+        <a class="btn primary big" href="machine.html">Start the journey <span aria-hidden="true">→</span></a>
+        <button type="button" class="btn big glass" id="heroPalette">Try a scenario <kbd>Ctrl K</kbd></button>
+      </div>
+      <dl class="hero-facts">
+        <div><dt data-count="6">6</dt><dd>replacement policies</dd></div>
+        <div><dt data-count="4">4</dt><dd>page-table levels</dd></div>
+        <div><dt data-count="96">96</dt><dd>automated tests</dd></div>
+        <div><dt data-count="32">32</dt><dd>bit address space</dd></div>
+      </dl>
+    </div>
+    <div class="hero-viz card" aria-label="Live MMU animation">
+      <div class="hv-head"><span class="hv-title"><span class="live-dot"></span>LIVE · mini-MMU running a locality workload</span><span class="hv-ratio"><b id="hvRatio">0%</b> hit ratio</span></div>
+      <svg id="heroSvg" viewBox="0 0 560 360" role="img" aria-label="Packets travelling CPU to TLB to RAM, through the page table on a miss and the disk on a fault"></svg>
+      <div class="hv-foot">
+        <span><i class="sw hit"></i>Hit <b id="hvHit">0</b></span>
+        <span><i class="sw miss"></i>Walk <b id="hvMiss">0</b></span>
+        <span><i class="sw fault"></i>Fault <b id="hvFault">0</b></span>
+        <span class="hv-addr" id="hvAddr">VA —</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-head" id="journey">
+    <p class="kicker">The journey</p>
+    <h2>Nine connected rooms</h2>
+    <p class="section-lede">Each page does one job. Your machine, timeline and results travel with you from page to page, so a change in one room shows up in every other.</p>
+  </section>
+  <div class="journey-grid">
+      <a class="jcard" href="machine.html" style="--d:0.00s">
+        <span class="jc-no">01</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16M8 5v4M15 10v4M11 15v4"/></svg></span>
+        <h3 style="view-transition-name: jt-machine">Machine</h3>
+        <p>Configure the hardware: address widths, page size, TLB size, associativity, policy, page faults, processes and timing.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="machine"></span>
+      </a>
+      <a class="jcard" href="translate.html" style="--d:0.05s">
+        <span class="jc-no">02</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h12M12 6l6 6-6 6"/></svg></span>
+        <h3 style="view-transition-name: jt-translate">Translate</h3>
+        <p>Probe one address. Get the answer instantly, or watch the full calculation play step by step.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="translate"></span>
+      </a>
+      <a class="jcard" href="timeline.html" style="--d:0.10s">
+        <span class="jc-no">03</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg></span>
+        <h3 style="view-transition-name: jt-timeline">Timeline</h3>
+        <p>Run whole workloads, scrub through time like a logic analyzer, and branch “what if” runs.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="timeline"></span>
+      </a>
+      <a class="jcard" href="structures.html" style="--d:0.15s">
+        <span class="jc-no">04</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></span>
+        <h3 style="view-transition-name: jt-structures">Structures</h3>
+        <p>Look inside the TLB sets and ways, the page-table map and physical memory frames.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="structures"></span>
+      </a>
+      <a class="jcard" href="analytics.html" style="--d:0.20s">
+        <span class="jc-no">05</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></span>
+        <h3 style="view-transition-name: jt-analytics">Analytics</h3>
+        <p>Hit ratio over time, outcome mix and effective access time, modelled vs measured.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="analytics"></span>
+      </a>
+      <a class="jcard" href="lab.html" style="--d:0.25s">
+        <span class="jc-no">06</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3M8 3h8"/></svg></span>
+        <h3 style="view-transition-name: jt-lab">Policy lab</h3>
+        <p>Run one trace through six policies and seven sizes. Belady’s anomaly is flagged automatically.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="lab"></span>
+      </a>
+      <a class="jcard" href="learn.html" style="--d:0.30s">
+        <span class="jc-no">07</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 6l10-3 10 3-10 3zM6 8v6c3 2 9 2 12 0V8"/></svg></span>
+        <h3 style="view-transition-name: jt-learn">Learn</h3>
+        <p>Field notes, viva drill, real-world applications and the mapping to real CPUs.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="learn"></span>
+      </a>
+      <a class="jcard" href="verify.html" style="--d:0.35s">
+        <span class="jc-no">08</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></span>
+        <h3 style="view-transition-name: jt-verify">Self-test</h3>
+        <p>96 automated checks of the engine, run live in your browser.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="verify"></span>
+      </a>
+      <a class="jcard" href="report.html" style="--d:0.40s">
+        <span class="jc-no">09</span>
+        <span class="jc-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6"/></svg></span>
+        <h3 style="view-transition-name: jt-report">Report</h3>
+        <p>A clean, print-ready A4 report of your session. Save it as a PDF.</p>
+        <span class="jc-go" aria-hidden="true">→</span>
+        <span class="jc-state" data-visited="report"></span>
+      </a>
+  </div>
+
+  <section class="card continue-card" id="continueCard" aria-labelledby="contTitle">
+    <header class="card-head"><h2 id="contTitle"><span class="idx">↻</span>Continue where you left off</h2><span class="chip" id="contSpec">—</span></header>
+    <div class="continue-body" id="continueBody"></div>
+  </section>
+
+  <section class="card who-card" aria-labelledby="whoTitle">
+    <header class="card-head"><h2 id="whoTitle"><span class="idx">★</span>Who it helps</h2><a class="link-btn" href="learn.html#apps">All applications →</a></header>
+    <div class="who-row">
+      <a href="learn.html#apps" style="--ac:var(--hit)"><b>Students</b><span>Check every VPN, offset and PA step by step</span></a>
+      <a href="learn.html#apps" style="--ac:var(--ctx)"><b>Teachers</b><span>One-click lessons that rewind and replay</span></a>
+      <a href="verify.html" style="--ac:var(--prot)"><b>Examiners</b><span>96 live tests prove correctness</span></a>
+      <a href="lab.html" style="--ac:var(--miss)"><b>Designers</b><span>Size TLBs and compare policies</span></a>
+    </div>
+  </section>
+</main>
+<script src="js/engine.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/fx.js?v=8"></script>
+</body>
+</html>

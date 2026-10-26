@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Machine · TLB/Scope</title>
+  <meta name="description" content="Configure the simulated MMU: address widths, page size, TLB organisation and policy, paging, processes and timing.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#06070b">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="css/styles.css?v=8">
+  <link rel="stylesheet" href="css/pages.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='5' fill='%2310131c'/%3E%3Cpath d='M11 16h4l2-4 2 8 2-4' stroke='%2334f5a4' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <script>
+    // Theme before first paint (no flash). The report page is always light.
+    try { const t = null || localStorage.getItem('tlbscope-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body data-page="machine">
+<script src="js/shell.js?v=8"></script>
+<main id="main" class="page page-machine">
+  <header class="page-hero">
+    <p class="kicker"><span class="step-no">01</span>Step 1 of 9 · Machine</p>
+    <h1 class="page-title" tabindex="-1" style="view-transition-name: jt-machine">Configure the machine</h1>
+    <p class="page-lede">Every setting rebuilds the MMU and <b>replays your whole timeline</b> under the new hardware, so you can compare cause and effect instantly.</p>
+    <div class="page-actions"><button type="button" class="btn" id="resetCfg">Factory reset</button><a class="btn primary" href="translate.html">Translate an address →</a></div>
+  </header>
+
+  <div class="machine-layout">
+    <section class="card machine-card" aria-labelledby="mcTitle">
+      <header class="card-head"><h2 id="mcTitle"><span class="idx">⚙</span>Hardware &amp; OS parameters</h2><span class="chip">changes apply instantly</span></header>
+      <div class="machine-grid">
+        <fieldset class="block">
+        <legend><span>01</span>Address geometry</legend>
+        <label class="field">Virtual address width
+          <span class="range-row"><input type="range" id="vaBits" min="4" max="32" step="1"><output for="vaBits" id="vaBitsOut"></output></span>
+        </label>
+        <label class="field">Physical address width
+          <span class="range-row"><input type="range" id="paBits" min="4" max="32" step="1"><output for="paBits" id="paBitsOut"></output></span>
+        </label>
+        <div class="field-pair">
+          <label class="field">Page size
+            <select id="pageSize"></select>
+          </label>
+          <label class="field">Page-table levels
+            <select id="ptLevels"><option value="1">1 · flat</option><option value="2">2 · two-level</option><option value="3">3 · three-level</option><option value="4">4 · four-level</option></select>
+          </label>
+        </div>
+      </fieldset>
+        <fieldset class="block">
+        <legend><span>02</span>TLB</legend>
+        <div class="field-pair">
+          <label class="field">Entries
+            <select id="tlbEntries"><option>1</option><option>2</option><option>3</option><option>4</option><option>8</option><option>16</option><option>32</option><option>64</option></select>
+          </label>
+          <label class="field">Organisation
+            <select id="tlbWays"></select>
+          </label>
+        </div>
+        <label class="field">Replacement policy
+          <select id="tlbPolicy">
+            <option value="LRU">LRU — least recently used</option>
+            <option value="FIFO">FIFO — oldest insertion</option>
+            <option value="LFU">LFU — least frequently used</option>
+            <option value="CLOCK">CLOCK — second chance</option>
+            <option value="RANDOM">RANDOM — seeded</option>
+          </select>
+        </label>
+      </fieldset>
+        <fieldset class="block">
+        <legend><span>03</span>Paging &amp; faults</legend>
+        <label class="field">Initial page table
+          <select id="mapping"><option value="sequential">Sequential — page n → frame n</option><option value="sparse">Sparse — even pages only</option><option value="random">Random — seeded scatter</option><option value="empty">Empty — nothing resident</option></select>
+        </label>
+        <div class="field-pair">
+          <label class="field">On page fault
+            <select id="faultMode"><option value="report">Report only</option><option value="demand">Demand-page it in</option></select>
+          </label>
+          <label class="field">Frame victim
+            <select id="framePolicy"><option value="FIFO">FIFO</option><option value="LRU">LRU</option><option value="CLOCK">CLOCK</option></select>
+          </label>
+        </div>
+      </fieldset>
+        <fieldset class="block">
+        <legend><span>04</span>Processes</legend>
+        <div class="field-pair">
+          <label class="field">Address spaces
+            <select id="processes"><option value="1">1 process</option><option value="2">2 processes</option><option value="3">3 processes</option><option value="4">4 processes</option></select>
+          </label>
+          <label class="field">On context switch
+            <select id="contextMode"><option value="asid">Keep — ASID tags</option><option value="flush">Flush the TLB</option></select>
+          </label>
+        </div>
+      </fieldset>
+        <fieldset class="block">
+        <legend><span>05</span>Timing model</legend>
+        <div class="field-trio">
+          <label class="field">TLB <i>t</i><span class="unit"><input type="number" id="t" min="0" step="1" inputmode="decimal"><em>ns</em></span></label>
+          <label class="field">Memory <i>m</i><span class="unit"><input type="number" id="m" min="0" step="1" inputmode="decimal"><em>ns</em></span></label>
+          <label class="field">Fault <i>S</i><span class="unit"><input type="number" id="faultTime" min="0" step="100" inputmode="decimal"><em>ns</em></span></label>
+        </div>
+      </fieldset>
+      </div>
+      <h3 class="mini-h">Derived geometry</h3>
+      <div class="derived" id="derived" aria-live="polite"></div>
+      <p class="cfg-error" id="cfgError" role="alert" hidden></p>
+    </section>
+    <section class="card scen-card" id="scenarios" aria-labelledby="scTitle">
+      <header class="card-head"><h2 id="scTitle"><span class="idx">▶</span>Scenarios</h2><span class="chip">one-click lessons</span></header>
+      <p class="muted small">Each scenario sets the machine and loads a ready-made timeline. Pick one, then follow it through the other pages.</p>
+      <div class="scenario-grid big" id="scenarioGrid"></div>
+      <div class="scen-next" id="scenarioNext" hidden></div>
+    </section>
+  </div>
+</main>
+<script src="js/engine.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/fx.js?v=8"></script>
+</body>
+</html>
